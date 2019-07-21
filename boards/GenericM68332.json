@@ -1,0 +1,12 @@
+{
+  "build": {
+    "extra_flags": "-DREENTRANT_SYSCALLS_PROVIDED -D_REENT_SMALL",
+    "mcu": "68332",
+    "f_cpu": "16000000L"
+  },
+  "frameworks": [
+  ],
+  "name": "Generic 68332",
+  "url": "www.nxp.com/docs/en/data-sheet/MC68332TS.pdf",
+  "vendor": "Freescale"
+}

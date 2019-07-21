@@ -1,0 +1,184 @@
+# Copyright 2014-present PlatformIO <contact@platformio.org>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from os.path import join
+from time import sleep
+
+from SCons.Script import (ARGUMENTS, COMMAND_LINE_TARGETS, AlwaysBuild,
+                          Builder, Default, DefaultEnvironment)
+
+from platformio.util import get_serial_ports
+
+
+def BeforeUpload(target, source, env):  # pylint: disable=W0613,W0621
+    upload_options = {}
+    if "BOARD" in env:
+        upload_options = env.BoardConfig().get("upload", {})
+
+    # Deprecated: compatibility with old projects. Use `program` instead
+    if "usb" in env.subst("$UPLOAD_PROTOCOL"):
+        upload_options['require_upload_port'] = False
+        env.Replace(UPLOAD_SPEED=None)
+
+    if env.subst("$UPLOAD_SPEED"):
+        env.Append(UPLOADERFLAGS=["-b", "$UPLOAD_SPEED"])
+
+    # extra upload flags
+    if "extra_flags" in upload_options:
+        env.Append(UPLOADERFLAGS=upload_options.get("extra_flags"))
+
+    # disable erasing by default
+    env.Append(UPLOADERFLAGS=["-D"])
+
+    if upload_options and not upload_options.get("require_upload_port", False):
+        return
+
+    env.AutodetectUploadPort()
+    env.Append(UPLOADERFLAGS=["-P", '"$UPLOAD_PORT"'])
+
+    if env.subst("$BOARD") in ("raspduino", "emonpi", "sleepypi"):
+
+        def _rpi_sysgpio(path, value):
+            with open(path, "w") as f:
+                f.write(str(value))
+
+        if env.subst("$BOARD") == "raspduino":
+            pin_num = 18
+        elif env.subst("$BOARD") == "sleepypi":
+            pin_num = 22
+        else:
+            pin_num = 4
+
+        _rpi_sysgpio("/sys/class/gpio/export", pin_num)
+        _rpi_sysgpio("/sys/class/gpio/gpio%d/direction" % pin_num, "out")
+        _rpi_sysgpio("/sys/class/gpio/gpio%d/value" % pin_num, 1)
+        sleep(0.1)
+        _rpi_sysgpio("/sys/class/gpio/gpio%d/value" % pin_num, 0)
+        _rpi_sysgpio("/sys/class/gpio/unexport", pin_num)
+    else:
+        if (not upload_options.get("disable_flushing", False)
+                and not env.get("UPLOAD_PORT", "").startswith("net:")):
+            env.FlushSerialBuffer("$UPLOAD_PORT")
+
+        before_ports = get_serial_ports()
+
+        if upload_options.get("use_1200bps_touch", False):
+            env.TouchSerialPort("$UPLOAD_PORT", 1200)
+
+        if upload_options.get("wait_for_upload_port", False):
+            env.Replace(UPLOAD_PORT=env.WaitForNewSerialPort(before_ports))
+
+
+env = DefaultEnvironment()
+
+env.Replace(
+    AR="m68k-elf-gcc-ar",
+    AS="m68k-elf-as",
+    CC="m68k-elf-gcc",
+    GDB="m68k-elf-gdb",
+    CXX="m68k-elf-g++",
+    OBJCOPY="m68k-elf-objcopy",
+    RANLIB="m68k-elf-gcc-ranlib",
+    SIZETOOL="m68k-elf-size",
+
+    ARFLAGS=["rc"],
+
+    SIZEPROGREGEXP=r"^(?:\.text|\.data|\.bootloader)\s+(\d+).*",
+    SIZEDATAREGEXP=r"^(?:\.data|\.bss|\.noinit)\s+(\d+).*",
+    SIZECHECKCMD="$SIZETOOL -A -d $SOURCES",
+    SIZEPRINTCMD='$SIZETOOL --mcu=$BOARD_MCU -C -d $SOURCES',
+
+    PROGSUFFIX=".elf"
+)
+
+env.Append(
+    BUILDERS=dict(
+        ElfToHex=Builder(
+            action=env.VerboseAction(" ".join([
+                "$OBJCOPY",
+                "-O",
+                "ihex",
+                "-R",
+                ".eeprom",
+                "$SOURCES",
+                "$TARGET"
+            ]), "Building $TARGET"),
+            suffix=".hex"
+        )
+    )
+)
+
+# Allow user to override via pre:script
+if env.get("PROGNAME", "program") == "program":
+    env.Replace(PROGNAME="firmware")
+
+if not env.get("PIOFRAMEWORK"):
+    env.SConscript("frameworks/_bare.py", exports="env")
+
+#
+# Target: Build executable and linkable firmware
+#
+
+target_elf = None
+if "nobuild" in COMMAND_LINE_TARGETS:
+    target_elf = join("$BUILD_DIR", "${PROGNAME}.elf")
+    target_firm = join("$BUILD_DIR", "${PROGNAME}.hex")
+else:
+    target_elf = env.BuildProgram()
+    target_firm = env.ElfToHex(join("$BUILD_DIR", "${PROGNAME}"), target_elf)
+
+AlwaysBuild(env.Alias("nobuild", target_firm))
+target_buildprog = env.Alias("buildprog", target_firm, target_firm)
+
+#
+# Target: Print binary size
+#
+
+target_size = env.Alias(
+    "size", target_elf,
+    env.VerboseAction("$SIZEPRINTCMD", "Calculating size $SOURCE"))
+AlwaysBuild(target_size)
+
+#
+# Target: Upload by default .hex file
+#
+
+upload_protocol = env.subst("$UPLOAD_PROTOCOL")
+
+
+if upload_protocol == "custom":
+    upload_actions = [env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")]
+else:
+    upload_actions = [env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")]
+
+
+AlwaysBuild(env.Alias("upload", target_firm, upload_actions))
+
+
+#
+# Target: Upload firmware using external programmer
+#
+
+target_program = env.Alias(
+    "program", target_firm,
+    [env.VerboseAction(env.AutodetectUploadPort, "Looking for upload port..."),
+     env.VerboseAction("$UPLOADCMD", "Programming $SOURCE")])
+AlwaysBuild(target_program)
+
+
+#
+# Setup default targets
+#
+
+Default([target_buildprog, target_size])

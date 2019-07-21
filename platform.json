@@ -1,0 +1,27 @@
+{
+  "name": "m68k",
+  "title": "Motorla 68k ",
+  "description": "blah",
+  "url": "http://www.freescale.com",
+  "homepage": "https://github.com/haarer/platform-m68k",
+  "license": "Apache-2.0",
+  "engines": {
+    "platformio": "<5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haarer/platform-m68k.git"
+  },
+  "version": "0.0.1",
+  "packageRepositories": [
+    "https://github.com/haarer/toolchain68k/releases/download/gcc910/manifest.json"
+  ],
+  "frameworks": {
+  },
+  "packages": {
+    "toolchain-m68k-current": {
+      "type": "toolchain",
+      "version": "~9.1.0"
+    }
+  }
+}
