@@ -19,7 +19,7 @@
   "frameworks": {
   },
   "packages": {
-    "toolchain-m68k-current": {
+    "toolchain-m68k-elf-current": {
       "type": "toolchain",
       "version": "~9.2.0"
     }
