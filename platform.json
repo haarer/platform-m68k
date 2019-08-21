@@ -21,7 +21,7 @@
   "packages": {
     "toolchain-m68k-elf-current": {
       "type": "toolchain",
-      "version": "~9.2.0"
+      "version": ">=8.2.0"
     }
   }
 }
