@@ -14,7 +14,7 @@
   },
   "version": "0.0.1",
   "packageRepositories": [
-    "https://github.com/haarer/toolchain68k/releases/download/gcc910/manifest.json"
+    "https://github.com/haarer/toolchain68k/releases/download/gcc920/manifest.json"
   ],
   "frameworks": {
   },
