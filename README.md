@@ -11,8 +11,8 @@ Motorola (now Freescale M68K processors are still used in embedded development i
 
 ```ini
 
-platform = m68k
-board = ...
+platform = https://github.com/haarer/platform-m68k.git
+board = GenericM68332
 ...
 ```
 
