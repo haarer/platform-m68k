@@ -52,7 +52,7 @@ env.Append(
     LINKFLAGS=[
         "-m$BOARD_MCU",
         "-g",
-        "-Wl,--script=bcc.ld,-Map=m68k-test.map,--allow-multiple-definition",
+ #       "-Wl,--script=bcc.ld,-Map=m68k-test.map,--allow-multiple-definition",
         "--verbose"
     ],
 
