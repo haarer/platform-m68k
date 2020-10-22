@@ -1,26 +1,34 @@
 {
   "name": "m68k",
-  "title": "Motorla 68k ",
-  "description": "blah",
+  "title": "Motorola 68k with up to date toolchain builds ",
+  "description": "Supports 68xxx processors",
   "url": "http://www.freescale.com",
   "homepage": "https://github.com/haarer/platform-m68k",
   "license": "Apache-2.0",
+  "keywords": [
+    "dev-platform",
+    "Motorola",
+    "68000",
+    "68020",
+    "68030",
+    "68040",
+    "Freescale",
+    "32-bit"
+],
   "engines": {
-    "platformio": "<5"
+    "platformio": "^5"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/haarer/platform-m68k.git"
   },
-  "version": "0.0.1",
-  "packageRepositories": [
-    "https://github.com/haarer/toolchain68k/releases/download/gcc920/manifest.json"
-  ],
+  "version": "0.0.2",
   "frameworks": {
   },
   "packages": {
     "toolchain-m68k-elf-current": {
       "type": "toolchain",
+      "owner": "haarer",
       "version": ">=8.2.0"
     }
   }
