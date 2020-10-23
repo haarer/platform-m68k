@@ -10,10 +10,9 @@ Motorola (now Freescale M68K processors are still used in embedded development i
 1. [Install PlatformIO](http://platformio.org)
 2. Create PlatformIO project and configure a platform option in [platformio.ini](http://docs.platformio.org/page/projectconf.html) file:
 
-
+Using the platform spec and tools published to the platformio repository
 ```ini
-
-platform = https://github.com/haarer/platform-m68k.git
+platform = m68k
 board = GenericM68332
 ...
 ```
